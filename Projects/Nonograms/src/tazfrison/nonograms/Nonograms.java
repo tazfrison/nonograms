@@ -7,21 +7,48 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JTable;
 
 public class Nonograms extends JPanel
 {
 	private int height;
 	private int width;
+	
+	public AtomicInteger board[][];
+	public Strip rows[];
+	public Strip columns[];
+	public LinkedList<Strip> processQueue;
+	
+	public Integer rowRuns[][];
+	public Integer columnRuns[][];
 
 	private final int CELL_SIZE = 20;
 
 	public Nonograms ()
 	{
 		super();
+		this.readFile();
+		
+		this.board = new AtomicInteger[this.width][this.height];
+		this.rows = new Strip[this.height];
+		this.columns = new Strip[this.width];
+		this.processQueue = new LinkedList<Strip>();
+		
+		for ( int i = 0; i < this.width; ++i )
+		{
+			AtomicInteger tempColumn[] = new AtomicInteger[this.height];
+			for ( int j = 0; j < this.height; ++j )
+			{
+				board[j][i] = new AtomicInteger( Strip.EMPTY );
+				tempColumn[j] = board[j][i];
+			}
+			rows[i] = new Strip( board[i], columns, this.rowRuns[i], processQueue, i );
+			columns[i] = new Strip( tempColumn, rows, this.columnRuns[i], processQueue, i );
+		}
+		
 		setBackground( Color.WHITE );
 	}
 
@@ -39,12 +66,12 @@ public class Nonograms extends JPanel
 
 	public void drawBoard ( Graphics g )
 	{
-		g.drawRect( 0, 0, 15 * this.CELL_SIZE, 15 * this.CELL_SIZE );
-		for ( int i = 0; i < 15; ++i )
+		g.drawRect( 0, 0, this.width * this.CELL_SIZE, this.height * this.CELL_SIZE );
+		for ( int i = 0; i < this.width; ++i )
 		{
-			for ( int j = 0; j < 15; ++j )
+			for ( int j = 0; j < this.height; ++j )
 			{
-				this.drawCell( g, i, j, Strip.EMPTY );
+				this.drawCell( g, i, j, this.board[i][j].get() );
 			}
 		}
 	}
@@ -58,58 +85,16 @@ public class Nonograms extends JPanel
 		
 		if ( value == Strip.MARKED )
 		{
-			g.drawLine( x + 2, y + 2, x + this.CELL_SIZE - 4,
-					y + this.CELL_SIZE - 4 );
-			g.drawLine( x + this.CELL_SIZE - 4, y + 2, x + 2,
-					y + this.CELL_SIZE - 4 );
+			g.drawLine( x + 2, y + 2, x + this.CELL_SIZE - 3,
+					y + this.CELL_SIZE - 3 );
+			g.drawLine( x + this.CELL_SIZE - 3, y + 2, x + 2,
+					y + this.CELL_SIZE - 3 );
 		}
 		else if ( value == Strip.FILLED )
 		{
-			g.fillRect( x + 2, y + 2, this.CELL_SIZE - 4,
-					this.CELL_SIZE - 4 );
+			g.fillRect( x + 2, y + 2, this.CELL_SIZE - 3,
+					this.CELL_SIZE - 3 );
 		}
-	}
-
-	public static void printBoard ( Integer[][] board, Integer rowRuns[][],
-			Integer columnRuns[][] )
-	{
-		int rowMax = 0, columnMax = 0;
-		for ( Integer run[] : rowRuns )
-		{
-			if ( run.length > rowMax )
-				rowMax = run.length;
-		}
-		for ( Integer run[] : columnRuns )
-		{
-			if ( run.length > columnMax )
-				columnMax = run.length;
-		}
-		int width = board.length + rowMax, height = board[0].length + columnMax;
-		Object tableData[][] = new Integer[width][height];
-		for ( int i = rowMax; i < width; ++i )
-		{
-			for ( int j = 0; j < columnMax; ++j )
-			{
-				if ( columnRuns[i - rowMax].length > j )
-					tableData[i][j] = columnRuns[i - rowMax][j];
-			}
-		}
-		for ( int j = columnMax; j < height; ++j )
-		{
-			for ( int i = 0; i < rowMax; ++i )
-			{
-				if ( rowRuns[j - columnMax].length > i )
-					tableData[i][j] = rowRuns[j - columnMax][i];
-			}
-		}
-		for ( int i = 0; i < width - rowMax; ++i )
-		{
-			for ( int j = 0; j < height - columnMax; ++j )
-			{
-				tableData[i + rowMax][j + columnMax] = board[i][j];
-			}
-		}
-		JTable table = new JTable( tableData, null );
 	}
 
 	private void readFile ()
@@ -118,9 +103,6 @@ public class Nonograms extends JPanel
 		String line;
 		ArrayList<Integer> runTemp = new ArrayList<Integer>();
 
-		Integer rowRuns[][];
-		Integer columnRuns[][];
-
 		try
 		{
 			input = new Scanner( new BufferedReader( new FileReader(
@@ -128,8 +110,8 @@ public class Nonograms extends JPanel
 			this.height = input.nextInt();
 			this.width = input.nextInt();
 
-			rowRuns = new Integer[this.width][];
-			columnRuns = new Integer[this.height][];
+			this.rowRuns = new Integer[this.width][];
+			this.columnRuns = new Integer[this.height][];
 			input.nextLine();
 			for ( int i = 0; i < this.height; ++i )
 			{
@@ -138,10 +120,10 @@ public class Nonograms extends JPanel
 				lineScanner = new Scanner( line );
 				while ( lineScanner.hasNextInt() )
 				{
-					runTemp.add( lineScanner.nextInt() );
+					runTemp.add( new Integer( lineScanner.nextInt() ) );
 				}
-				rowRuns[i] = new Integer[runTemp.size()];
-				runTemp.toArray( rowRuns[i] );
+				this.rowRuns[i] = new Integer[runTemp.size()];
+				runTemp.toArray( this.rowRuns[i] );
 			}
 			for ( int i = 0; i < this.width; ++i )
 			{
@@ -150,10 +132,10 @@ public class Nonograms extends JPanel
 				lineScanner = new Scanner( line );
 				while ( lineScanner.hasNextInt() )
 				{
-					runTemp.add( lineScanner.nextInt() );
+					runTemp.add( new Integer( lineScanner.nextInt() ) );
 				}
-				columnRuns[i] = new Integer[runTemp.size()];
-				runTemp.toArray( columnRuns[i] );
+				this.columnRuns[i] = new Integer[runTemp.size()];
+				runTemp.toArray( this.columnRuns[i] );
 			}
 
 			input.close();
@@ -174,9 +156,33 @@ public class Nonograms extends JPanel
 		frame.add( nono );
 		frame.setSize( 500, 400 );
 		frame.setVisible( true );
+		
+		while ( !nono.processQueue.isEmpty() )
+		{
+			nono.processQueue.poll().process();
+			nono.repaint();
+			try
+			{
+				Thread.sleep( 500 );
+			} catch ( InterruptedException ex )
+			{
+				Thread.currentThread().interrupt();
+			}
+		}
+		
+		nono.columns[0].process();
+		nono.columns[1].process();
+		nono.columns[2].process();
+		nono.columns[3].process();
+		nono.columns[4].process();
+	
+		nono.rows[0].process();
+		nono.rows[1].process();
+		nono.rows[2].process();
+		nono.rows[3].process();
+		nono.rows[4].process();
 
 /*
-		nono.readFile();
 
 		Integer board[][] = new Integer[nono.width][nono.height];
 		Strip rows[] = new Strip[nono.height];

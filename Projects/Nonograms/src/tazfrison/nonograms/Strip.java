@@ -2,6 +2,7 @@ package tazfrison.nonograms;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Strip
 {
@@ -10,19 +11,19 @@ public class Strip
 	final public static int MARKED = 2;
 
 	private boolean bIsQueued;
-	private Integer cells[];
+	private AtomicInteger cells[];
 	private ArrayList<Integer> indices;
 	private Integer[] runs;
 	private Strip[] crosses;
 	private LinkedList<Strip> queue;
 	private int index;
 
-	public Strip ( Integer[] cells, Strip[] crosses, Integer[] runs,
+	public Strip ( AtomicInteger[] cells, Strip[] crosses, Integer[] runs,
 			LinkedList<Strip> queue, int index )
 	{
 		this.cells = cells;
 		this.runs = runs;
-		bIsQueued = false;
+		this.bIsQueued = false;
 		this.crosses = crosses;
 		this.queue = queue;
 		this.index = index;
@@ -31,28 +32,37 @@ public class Strip
 
 	public boolean process ()
 	{
-		int sum = runs.length, index = 0;
-
-		for ( int i : runs )
-			sum += i;
-
-		for ( int i : runs )
+		int sum = this.runs.length - 1, index = 0;
+		
+		for( int i : this.runs )
 		{
-			if ( i > (cells.length - sum) )
+			sum += i;
+		}
+		
+		int diff = this.cells.length - sum;
+
+		System.out.println( "Processing: " + this.index + ", diff: " + diff );
+
+		for ( int i : this.runs )
+		{
+			System.out.println( i );
+			if ( i > diff )
 			{
-				for ( int j = sum; j < i; ++j )
+				for ( int j = index + diff; j < index + i; ++j )
 				{
-					cells[j + index] = FILLED;
+					this.cells[j].set( FILLED );
+					System.out.println( "Filled: " + this.index + " " + j );
 				}
-				if ( sum == cells.length )
+				if ( sum == cells.length && this.cells.length > i + index )
 				{
-					cells[i + index] = MARKED;
+					this.cells[i + index].set( MARKED );
 					this.crosses[i + index].queue( this.index );
+					System.out.println( "Marked: " + this.index + " " + ( i + index ) );
 				}
 				index += i + 1;
 			}
 		}
-		bIsQueued = false;
+		this.bIsQueued = false;
 		return true;
 	}
 
