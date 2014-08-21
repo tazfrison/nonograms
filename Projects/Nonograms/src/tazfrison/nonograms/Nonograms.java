@@ -1,85 +1,73 @@
 package tazfrison.nonograms;
 
-import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Scanner;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JTable;
 
 public class Nonograms extends JPanel
 {
-	private boolean DEBUG = false;
+	private int height;
+	private int width;
+
+	private final int CELL_SIZE = 20;
 
 	public Nonograms ()
 	{
-		super( new GridLayout( 1, 0 ) );
-
-		String[] columnNames = {
-				"First Name", "Last Name", "Sport", "# of Years", "Vegetarian"
-		};
-
-		Object[][] data = {
-				{
-						"Kathy", "Smith", "Snowboarding", new Integer( 5 ),
-						new Boolean( false )
-				},
-				{
-						"John", "Doe", "Rowing", new Integer( 3 ), new Boolean( true )
-				},
-				{
-						"Sue", "Black", "Knitting", new Integer( 2 ), new Boolean( false )
-				},
-				{
-						"Jane", "White", "Speed reading", new Integer( 20 ),
-						new Boolean( true )
-				}, {
-						"Joe", "Brown", "Pool", new Integer( 10 ), new Boolean( false )
-				}
-		};
-
-		final JTable table = new JTable( data, columnNames );
-		table.setPreferredScrollableViewportSize( new Dimension( 500, 70 ) );
-		table.setFillsViewportHeight( true );
-
-		if ( DEBUG )
-		{
-			table.addMouseListener( new MouseAdapter()
-			{
-				public void mouseClicked ( MouseEvent e )
-				{
-					printDebugData( table );
-				}
-			} );
-		}
-
-		// Create the scroll pane and add the table to it.
-		JScrollPane scrollPane = new JScrollPane( table );
-
-		// Add the scroll pane to this panel.
-		add( scrollPane );
+		super();
+		setBackground( Color.WHITE );
 	}
 
-	private void printDebugData ( JTable table )
+	public void paintComponent ( Graphics g )
 	{
-		int numRows = table.getRowCount();
-		int numCols = table.getColumnCount();
-		javax.swing.table.TableModel model = table.getModel();
+		int width = getWidth();
+		int height = getHeight();
 
-		System.out.println( "Value of data: " );
-		for ( int i = 0; i < numRows; i++ )
+		super.paintComponent( g );
+
+		g.setColor( Color.BLACK );
+		g.clearRect( 0, 0, width, height );
+		this.drawBoard( g );
+	}
+
+	public void drawBoard ( Graphics g )
+	{
+		g.drawRect( 0, 0, 15 * this.CELL_SIZE, 15 * this.CELL_SIZE );
+		for ( int i = 0; i < 15; ++i )
 		{
-			System.out.print( "    row " + i + ":" );
-			for ( int j = 0; j < numCols; j++ )
+			for ( int j = 0; j < 15; ++j )
 			{
-				System.out.print( "  " + model.getValueAt( i, j ) );
+				this.drawCell( g, i, j, Strip.EMPTY );
 			}
-			System.out.println();
 		}
-		System.out.println( "--------------------------" );
+	}
+
+	public void drawCell ( Graphics g, int row, int column, int value )
+	{
+		int x = column * this.CELL_SIZE,
+				y = row * this.CELL_SIZE;
+		g.drawRect( x, y, this.CELL_SIZE,
+				this.CELL_SIZE );
+		
+		if ( value == Strip.MARKED )
+		{
+			g.drawLine( x + 2, y + 2, x + this.CELL_SIZE - 4,
+					y + this.CELL_SIZE - 4 );
+			g.drawLine( x + this.CELL_SIZE - 4, y + 2, x + 2,
+					y + this.CELL_SIZE - 4 );
+		}
+		else if ( value == Strip.FILLED )
+		{
+			g.fillRect( x + 2, y + 2, this.CELL_SIZE - 4,
+					this.CELL_SIZE - 4 );
+		}
 	}
 
 	public static void printBoard ( Integer[][] board, Integer rowRuns[][],
@@ -124,69 +112,92 @@ public class Nonograms extends JPanel
 		JTable table = new JTable( tableData, null );
 	}
 
-	private static void createAndShowGUI ()
+	private void readFile ()
 	{
-		// Create and set up the window.
-		JFrame frame = new JFrame( "Nonograms" );
-		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+		Scanner input = null, lineScanner = null;
+		String line;
+		ArrayList<Integer> runTemp = new ArrayList<Integer>();
 
-		// Create and set up the content pane.
-		Nonograms newContentPane = new Nonograms();
-		newContentPane.setOpaque( true ); // content panes must be opaque
-		frame.setContentPane( newContentPane );
+		Integer rowRuns[][];
+		Integer columnRuns[][];
 
-		// Display the window.
-		frame.pack();
-		frame.setVisible( true );
+		try
+		{
+			input = new Scanner( new BufferedReader( new FileReader(
+					"src/tazfrison/nonograms/data/game1.txt" ) ) );
+			this.height = input.nextInt();
+			this.width = input.nextInt();
+
+			rowRuns = new Integer[this.width][];
+			columnRuns = new Integer[this.height][];
+			input.nextLine();
+			for ( int i = 0; i < this.height; ++i )
+			{
+				runTemp.clear();
+				line = input.nextLine();
+				lineScanner = new Scanner( line );
+				while ( lineScanner.hasNextInt() )
+				{
+					runTemp.add( lineScanner.nextInt() );
+				}
+				rowRuns[i] = new Integer[runTemp.size()];
+				runTemp.toArray( rowRuns[i] );
+			}
+			for ( int i = 0; i < this.width; ++i )
+			{
+				runTemp.clear();
+				line = input.nextLine();
+				lineScanner = new Scanner( line );
+				while ( lineScanner.hasNextInt() )
+				{
+					runTemp.add( lineScanner.nextInt() );
+				}
+				columnRuns[i] = new Integer[runTemp.size()];
+				runTemp.toArray( columnRuns[i] );
+			}
+
+			input.close();
+		} catch ( Exception e )
+		{
+			return;
+		}
 	}
 
 	public static void main ( String[] args )
 	{
-		// Schedule a job for the event-dispatching thread:
-		// creating and showing this application's GUI.
-		javax.swing.SwingUtilities.invokeLater( new Runnable()
-		{
-			public void run ()
-			{
-				createAndShowGUI();
-			}
-		} );
-	}
-	/*
-	 * public static void main ( String[] args ) { Scanner input = null,
-	 * lineScanner = null; int rowLength, columnLength; String line;
-	 * ArrayList<Integer> runTemp = new ArrayList<Integer>();
-	 * 
-	 * Integer rowRuns[][]; Integer columnRuns[][];
-	 * 
-	 * try { input = new Scanner( new BufferedReader( new FileReader(
-	 * "src/tazfrison/nonograms/data/game1.txt" ) ) ); columnLength =
-	 * input.nextInt(); rowLength = input.nextInt();
-	 * 
-	 * rowRuns = new Integer[rowLength][]; columnRuns = new
-	 * Integer[columnLength][]; input.nextLine(); for ( int i = 0; i <
-	 * columnLength; ++i ) { runTemp.clear(); line = input.nextLine(); lineScanner
-	 * = new Scanner( line ); while ( lineScanner.hasNextInt() ) { runTemp.add(
-	 * lineScanner.nextInt() ); } rowRuns[i] = new Integer[runTemp.size()];
-	 * runTemp.toArray( rowRuns[i] ); } for ( int i = 0; i < rowLength; ++i ) {
-	 * runTemp.clear(); line = input.nextLine(); lineScanner = new Scanner( line
-	 * ); while ( lineScanner.hasNextInt() ) { runTemp.add( lineScanner.nextInt()
-	 * ); } columnRuns[i] = new Integer[runTemp.size()]; runTemp.toArray(
-	 * columnRuns[i] ); }
-	 * 
-	 * input.close(); } catch ( Exception e ) { return; }
-	 * 
-	 * Integer board[][] = new Integer[rowLength][columnLength]; Strip rows[] =
-	 * new Strip[columnLength]; Strip columns[] = new Strip[rowLength];
-	 * LinkedList<Strip> processQueue = new LinkedList<Strip>();
-	 * 
-	 * for ( int i = 0; i < rowLength; ++i ) { Integer tempColumn[] = new
-	 * Integer[columnLength]; for ( int j = 0; j < columnLength; ++j ) {
-	 * board[i][j] = Strip.EMPTY; tempColumn[j] = board[i][j]; } rows[i] = new
-	 * Strip( board[i], columns, rowRuns[i], processQueue, i ); columns[i] = new
-	 * Strip( tempColumn, rows, columnRuns[i], processQueue, i ); }
-	 * 
-	 * while ( !processQueue.isEmpty() ) { processQueue.poll().process(); } }
-	 */
+		JFrame frame = new JFrame( "Nonograms" );
+		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 
+		// Create and set up the content pane.
+		Nonograms nono = new Nonograms();
+		nono.setOpaque( true ); // content panes must be opaque
+		frame.add( nono );
+		frame.setSize( 500, 400 );
+		frame.setVisible( true );
+
+/*
+		nono.readFile();
+
+		Integer board[][] = new Integer[nono.width][nono.height];
+		Strip rows[] = new Strip[nono.height];
+		Strip columns[] = new Strip[nono.width];
+		LinkedList<Strip> processQueue = new LinkedList<Strip>();
+
+		for ( int i = 0; i < nono.width; ++i )
+		{
+			Integer tempColumn[] = new Integer[nono.height];
+			for ( int j = 0; j < nono.height; ++j )
+			{
+				board[i][j] = Strip.EMPTY;
+				tempColumn[j] = board[i][j];
+			}
+			rows[i] = new Strip( board[i], columns, rowRuns[i], processQueue, i );
+			columns[i] = new Strip( tempColumn, rows, columnRuns[i], processQueue, i );
+		}
+
+		while ( !processQueue.isEmpty() )
+		{
+			processQueue.poll().process();
+		}*/
+	}
 }
