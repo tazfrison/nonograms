@@ -16,12 +16,12 @@ public class Nonograms extends JPanel
 {
 	private int height;
 	private int width;
-	
+
 	public AtomicInteger board[][];
 	public Strip rows[];
 	public Strip columns[];
 	public LinkedList<Strip> processQueue;
-	
+
 	public Integer rowRuns[][];
 	public Integer columnRuns[][];
 
@@ -31,12 +31,12 @@ public class Nonograms extends JPanel
 	{
 		super();
 		this.readFile();
-		
+
 		this.board = new AtomicInteger[this.width][this.height];
 		this.rows = new Strip[this.height];
 		this.columns = new Strip[this.width];
 		this.processQueue = new LinkedList<Strip>();
-		
+
 		for ( int i = 0; i < this.width; ++i )
 		{
 			AtomicInteger tempColumn[] = new AtomicInteger[this.height];
@@ -46,9 +46,12 @@ public class Nonograms extends JPanel
 				tempColumn[j] = board[j][i];
 			}
 			rows[i] = new Strip( board[i], columns, this.rowRuns[i], processQueue, i );
-			columns[i] = new Strip( tempColumn, rows, this.columnRuns[i], processQueue, i );
+			columns[i] = new Strip( tempColumn, rows, this.columnRuns[i],
+					processQueue, i );
+			processQueue.add( rows[i] );
+			processQueue.add( columns[i] );
 		}
-		
+
 		setBackground( Color.WHITE );
 	}
 
@@ -74,26 +77,50 @@ public class Nonograms extends JPanel
 				this.drawCell( g, i, j, this.board[i][j].get() );
 			}
 		}
+		for ( int i = 0; i < this.width; ++i )
+		{
+			this.drawRuns( g, false, i, this.columnRuns[i] );
+		}
+		for ( int i = 0; i < this.height; ++i )
+		{
+			this.drawRuns( g, true, i, this.rowRuns[i] );
+		}
+	}
+
+	public void drawRuns ( Graphics g, boolean isRow, int index, Integer[] runs )
+	{
+		int x = this.CELL_SIZE, y = this.CELL_SIZE;
+		if ( isRow )
+		{
+			x *= this.width;
+			y *= index + 1;
+		} else
+		{
+			y *= this.height + 1;
+			x *= index;
+		}
+		for ( int i = 0; i < runs.length; ++i )
+		{
+			g.drawString( runs[i].toString(), x, y );
+			if ( isRow )
+				x += this.CELL_SIZE;
+			else
+				y += this.CELL_SIZE;
+		}
 	}
 
 	public void drawCell ( Graphics g, int row, int column, int value )
 	{
-		int x = column * this.CELL_SIZE,
-				y = row * this.CELL_SIZE;
-		g.drawRect( x, y, this.CELL_SIZE,
-				this.CELL_SIZE );
-		
+		int x = column * this.CELL_SIZE, y = row * this.CELL_SIZE;
+		g.drawRect( x, y, this.CELL_SIZE, this.CELL_SIZE );
+
 		if ( value == Strip.MARKED )
 		{
-			g.drawLine( x + 2, y + 2, x + this.CELL_SIZE - 3,
-					y + this.CELL_SIZE - 3 );
-			g.drawLine( x + this.CELL_SIZE - 3, y + 2, x + 2,
-					y + this.CELL_SIZE - 3 );
-		}
-		else if ( value == Strip.FILLED )
+			g.drawLine( x + 2, y + 2, x + this.CELL_SIZE - 3, y + this.CELL_SIZE - 3 );
+			g.drawLine( x + this.CELL_SIZE - 3, y + 2, x + 2, y + this.CELL_SIZE - 3 );
+		} else if ( value == Strip.FILLED )
 		{
-			g.fillRect( x + 2, y + 2, this.CELL_SIZE - 3,
-					this.CELL_SIZE - 3 );
+			g.fillRect( x + 2, y + 2, this.CELL_SIZE - 3, this.CELL_SIZE - 3 );
 		}
 	}
 
@@ -156,7 +183,7 @@ public class Nonograms extends JPanel
 		frame.add( nono );
 		frame.setSize( 500, 400 );
 		frame.setVisible( true );
-		
+
 		while ( !nono.processQueue.isEmpty() )
 		{
 			nono.processQueue.poll().process();
@@ -169,41 +196,5 @@ public class Nonograms extends JPanel
 				Thread.currentThread().interrupt();
 			}
 		}
-		
-		nono.columns[0].process();
-		nono.columns[1].process();
-		nono.columns[2].process();
-		nono.columns[3].process();
-		nono.columns[4].process();
-	
-		nono.rows[0].process();
-		nono.rows[1].process();
-		nono.rows[2].process();
-		nono.rows[3].process();
-		nono.rows[4].process();
-
-/*
-
-		Integer board[][] = new Integer[nono.width][nono.height];
-		Strip rows[] = new Strip[nono.height];
-		Strip columns[] = new Strip[nono.width];
-		LinkedList<Strip> processQueue = new LinkedList<Strip>();
-
-		for ( int i = 0; i < nono.width; ++i )
-		{
-			Integer tempColumn[] = new Integer[nono.height];
-			for ( int j = 0; j < nono.height; ++j )
-			{
-				board[i][j] = Strip.EMPTY;
-				tempColumn[j] = board[i][j];
-			}
-			rows[i] = new Strip( board[i], columns, rowRuns[i], processQueue, i );
-			columns[i] = new Strip( tempColumn, rows, columnRuns[i], processQueue, i );
-		}
-
-		while ( !processQueue.isEmpty() )
-		{
-			processQueue.poll().process();
-		}*/
 	}
 }

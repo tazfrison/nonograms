@@ -45,19 +45,25 @@ public class Strip
 
 		for ( int i : this.runs )
 		{
-			System.out.println( i );
 			if ( i > diff )
 			{
 				for ( int j = index + diff; j < index + i; ++j )
 				{
-					this.cells[j].set( FILLED );
-					System.out.println( "Filled: " + this.index + " " + j );
+					if ( this.cells[j].get() != FILLED )
+					{
+						this.cells[j].set( FILLED );
+						this.crosses[j].queue( this.index );
+						System.out.println( "Filled: " + this.index + " " + j );
+					}
 				}
 				if ( sum == cells.length && this.cells.length > i + index )
 				{
-					this.cells[i + index].set( MARKED );
-					this.crosses[i + index].queue( this.index );
-					System.out.println( "Marked: " + this.index + " " + ( i + index ) );
+					if ( this.cells[i + index].get() != MARKED)
+					{
+						this.cells[i + index].set( MARKED );
+						this.crosses[i + index].queue( this.index );
+						System.out.println( "Marked: " + this.index + " " + ( i + index ) );
+					}
 				}
 				index += i + 1;
 			}
