@@ -48,8 +48,6 @@ public class Nonograms extends JPanel
 			rows[i] = new Strip( board[i], columns, this.rowRuns[i], processQueue, i );
 			columns[i] = new Strip( tempColumn, rows, this.columnRuns[i],
 					processQueue, i );
-			processQueue.add( rows[i] );
-			processQueue.add( columns[i] );
 		}
 
 		setBackground( Color.WHITE );
@@ -184,9 +182,30 @@ public class Nonograms extends JPanel
 		frame.setSize( 500, 400 );
 		frame.setVisible( true );
 
+		try
+		{
+			for ( int i = 0; i < nono.width; ++i )
+			{
+				nono.columns[i].initial();
+			}
+			for ( int i = 0; i < nono.height; ++i )
+			{
+				nono.rows[i].initial();
+			}
+		} catch ( Exception ex )
+		{
+			System.out.println( "Failed to initialize: " + ex.getMessage() );
+		}
+
 		while ( !nono.processQueue.isEmpty() )
 		{
-			nono.processQueue.poll().process();
+			try
+			{
+				nono.processQueue.poll().process();
+			} catch ( Exception ex )
+			{
+				System.out.println( "Failed to process: " + ex.getMessage() );
+			}
 			nono.repaint();
 			try
 			{
@@ -194,6 +213,7 @@ public class Nonograms extends JPanel
 			} catch ( InterruptedException ex )
 			{
 				Thread.currentThread().interrupt();
+				System.out.println( "Interrupted: " + ex.getMessage() );
 			}
 		}
 	}

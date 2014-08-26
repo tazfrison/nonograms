@@ -30,18 +30,18 @@ public class Strip
 		this.indices = new ArrayList<Integer>();
 	}
 
-	public boolean process ()
+	public boolean initial () throws Exception
 	{
 		int sum = this.runs.length - 1, index = 0;
-		
-		for( int i : this.runs )
+
+		for ( int i : this.runs )
 		{
 			sum += i;
 		}
-		
+
 		int diff = this.cells.length - sum;
 
-		System.out.println( "Processing: " + this.index + ", diff: " + diff );
+		System.out.println( "Initializing: " + this.index + ", diff: " + diff );
 
 		for ( int i : this.runs )
 		{
@@ -49,27 +49,87 @@ public class Strip
 			{
 				for ( int j = index + diff; j < index + i; ++j )
 				{
-					if ( this.cells[j].get() != FILLED )
-					{
-						this.cells[j].set( FILLED );
-						this.crosses[j].queue( this.index );
-						System.out.println( "Filled: " + this.index + " " + j );
-					}
+					this.mark( j, FILLED );
 				}
 				if ( sum == cells.length && this.cells.length > i + index )
 				{
-					if ( this.cells[i + index].get() != MARKED)
-					{
-						this.cells[i + index].set( MARKED );
-						this.crosses[i + index].queue( this.index );
-						System.out.println( "Marked: " + this.index + " " + ( i + index ) );
-					}
+					this.mark( i + index, MARKED );
 				}
 				index += i + 1;
 			}
 		}
+		return true;
+	}
+
+	public boolean process () throws Exception
+	{
+		System.out.println( "Processing: " + this.index );
+		int edge = 0;
+		int nextRun = 0;
+		for ( int i = 0; i < cells.length; ++i )
+		{
+			if ( cells[i].get() == FILLED )
+			{
+				if ( edge < this.runs[nextRun] )
+				{
+					for ( int j = edge; j < this.runs[nextRun] && i < this.cells.length; ++j )
+					{
+						this.mark( i, FILLED );
+						++i;
+					}
+					if ( edge == 0 && i < this.cells.length  )
+					{
+						this.mark( i, MARKED );
+					}
+					++nextRun;
+				}
+			} else if ( cells[i].get() == EMPTY )
+			{
+				++edge;
+			} else if ( cells[i].get() == MARKED )
+			{
+				if ( edge < this.runs[nextRun] )
+				{
+					while ( edge > 0 )
+					{
+						this.mark( i - edge--, MARKED );
+					}
+				}
+				edge = 0;
+			}
+		}
 		this.bIsQueued = false;
 		return true;
+	}
+
+	public void finish ()
+	{
+		try
+		{
+			for ( int i = 0; i < this.cells.length; ++i )
+			{
+				if ( this.cells[i].get() == EMPTY )
+				{
+					this.mark( i, MARKED );
+				}
+			}
+		} catch ( Exception ex )
+		{
+			System.out.println( ex.getMessage() + " in finish" );
+			// Should not be possible
+		}
+	}
+
+	public void mark ( int index, int value ) throws Exception
+	{
+		if ( this.cells[index].get() == EMPTY )
+		{
+			this.cells[index].set( value );
+			this.crosses[index].queue( this.index );
+		} else if ( this.cells[index].get() != value )
+		{
+			throw new Exception( "Contradiction" );
+		}
 	}
 
 	public boolean queue ( int index )
