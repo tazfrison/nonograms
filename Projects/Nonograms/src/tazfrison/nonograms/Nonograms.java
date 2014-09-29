@@ -36,17 +36,25 @@ public class Nonograms extends JPanel
 		this.rows = new Strip[this.height];
 		this.columns = new Strip[this.width];
 		this.processQueue = new LinkedList<Strip>();
+		AtomicInteger tempColumn[][] = new AtomicInteger[this.width][this.height];
 
 		for ( int i = 0; i < this.width; ++i )
 		{
-			AtomicInteger tempColumn[] = new AtomicInteger[this.height];
 			for ( int j = 0; j < this.height; ++j )
 			{
 				board[j][i] = new AtomicInteger( Strip.EMPTY );
-				tempColumn[j] = board[j][i];
+				tempColumn[i][j] = board[j][i];
 			}
+		}
+		
+		for ( int i = 0; i < this.height; ++i )
+		{
 			rows[i] = new Strip( board[i], columns, this.rowRuns[i], processQueue, i );
-			columns[i] = new Strip( tempColumn, rows, this.columnRuns[i],
+		}
+		
+		for ( int i = 0; i < this.width; ++i )
+		{
+			columns[i] = new Strip( tempColumn[i], rows, this.columnRuns[i],
 					processQueue, i );
 		}
 
@@ -186,11 +194,11 @@ public class Nonograms extends JPanel
 		{
 			for ( int i = 0; i < nono.width; ++i )
 			{
-				nono.columns[i].initial();
+				nono.columns[i].process();
 			}
 			for ( int i = 0; i < nono.height; ++i )
 			{
-				nono.rows[i].initial();
+				nono.rows[i].process();
 			}
 		} catch ( Exception ex )
 		{
