@@ -2,8 +2,6 @@ package tazfrison.nonograms;
 
 import java.util.ArrayList;
 
-
-
 /**
  * A group of one or more cells that are filled.
  * 
@@ -29,6 +27,40 @@ public class Sequence
 	{
 		this.start = start;
 		this.cells = cells;
-		this.end = this.start + this.cells.length;
+		this.end = this.start + this.cells.length - 1;
+	}
+
+	static public Sequence sequenceForCell ( int index, Cell[] cells )
+	{
+		// Check edge conditions
+		if ( index == 0 )
+		{
+
+		}
+		else if ( index == cells.length - 1 )
+		{
+
+		}
+		//Joins two Sequences
+		else if ( cells[index - 1].sequence != null
+				&& cells[index + 1].sequence != null )
+		{
+
+		}
+		//Extends a Sequence
+		else if ( cells[index - 1].sequence != null )
+		{
+			
+		}
+		else if ( cells[index + 1].sequence != null )
+		{
+			
+		}
+		//Starts new Sequence
+		else
+		{
+			
+		}
+		return null;
 	}
 }

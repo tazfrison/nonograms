@@ -12,18 +12,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Strip
 {
-	final public static int EMPTY = 0;
-	final public static int FILLED = 1;
-	final public static int MARKED = 2;
 
 	// Whether this Strip is already in the process queue.
 	private boolean bIsQueued;
-	// The cells in this Strip.
-	private Cell cells[];
 	// Cells that have been updated in perpendicular Strips.
 	private ArrayList<Integer> indices;
 	// Groups of filled cells for this Strip.
 	private Run[] runs;
+	private Run[] runsSorted;
+
 	// Perpendicular Strips.
 	private Strip[] crosses;
 	// The global process queue.
@@ -32,10 +29,10 @@ public class Strip
 	private LinkedList<Substrip> substrips;
 	// The global index of this Strip.
 	private int index;
-	// Whether initial() has been run for this Strip.
-	private boolean bInitialized;
 	// Length of Strip.
 	public int length;
+	// The cells in this Strip.
+	public Cell cells[];
 
 	/**
 	 * Constructor for Strip.
@@ -56,7 +53,6 @@ public class Strip
 			LinkedList<Strip> queue, int index )
 	{
 		this.bIsQueued = false;
-		this.bInitialized = false;
 		this.crosses = crosses;
 		this.queue = queue;
 		this.index = index;
@@ -65,7 +61,8 @@ public class Strip
 		this.substrips = new LinkedList<Substrip>();
 
 		this.runs = new Run[runs.length];
-		
+		this.runsSorted = new Run[runs.length];
+
 		int counter = 0;
 		for ( int i = 0; i < runs.length; ++i )
 		{
@@ -73,14 +70,13 @@ public class Strip
 			this.runs[i].first = counter;
 			counter += runs[i] + 1;
 		}
-		
+
 		counter = this.length;
-		for ( int i = runs.length - 1; i > 0; --i )
+		for ( int i = runs.length - 1; i >= 0; --i )
 		{
 			this.runs[i].last = counter;
-			counter -= runs[i] - 1;
+			counter -= (runs[i] + 1);
 		}
-		
 
 		this.cells = new Cell[cells.length];
 		for ( int i = 0; i < cells.length; ++i )
@@ -88,12 +84,20 @@ public class Strip
 			this.cells[i] = new Cell( cells[i], null );
 		}
 
-		Substrip initial = new Substrip( this.cells, this, 0 );
+		Substrip initialStrip = new Substrip( this.cells, this, 0 );
 
-		initial.lowerRun = 0;
-		initial.upperRun = this.runs.length - 1;
+		initialStrip.lowerRun = 0;
+		initialStrip.upperRun = this.runs.length - 1;
 
-		this.substrips.add( initial );
+		this.substrips.add( initialStrip );
+
+		try
+		{
+			this.initial();
+		} catch ( Exception e )
+		{
+
+		}
 	}
 
 	// TODO: Revisit this process. Change to calculating based on start/end for
@@ -106,34 +110,12 @@ public class Strip
 	 */
 	public void initial () throws Exception
 	{
-		int sum = this.runs.length - 1, index = 0;
+		System.out.println( "Initializing: " + this.index );
 
 		for ( Run i : this.runs )
 		{
-			sum += i.length;
+			i.overlap();
 		}
-
-		int diff = this.cells.length - sum;
-
-		System.out.println( "Initializing: " + this.index + ", diff: " + diff );
-
-		for ( Run i : this.runs )
-		{
-			if ( i.length > diff )
-			{
-				for ( int j = index + diff; j < index + i.length; ++j )
-				{
-					this.mark( j, FILLED );
-				}
-				if ( sum == cells.length && this.cells.length > i.length + index )
-				{
-					this.mark( i.length + index, MARKED );
-				}
-				index += i.length + 1;
-			}
-		}
-
-		this.bInitialized = true;
 	}
 
 	/**
@@ -146,18 +128,16 @@ public class Strip
 	{
 		System.out.println( "Processing: " + this.index );
 
-		if ( !this.bInitialized )
-		{
-			this.initial();
-		}
-
 		// TODO: Streamline contiguous updates
+		// TODO: Iterate in a way that allows me to add to list while iterating
 		for ( int update : this.indices )
 		{
-			if ( this.cells[update].get() == Strip.MARKED )
+			if ( this.cells[update].get() == Cell.MARKED )
 			{
-				this.cells[update].substrip.reduce( update );
-			} else if ( this.cells[update].get() == Strip.FILLED )
+				if ( this.cells[update].substrip != null )
+					this.cells[update].substrip.reduce( update );
+			}
+			else if ( this.cells[update].get() == Cell.FILLED )
 			{
 
 			}
@@ -168,32 +148,34 @@ public class Strip
 
 		for ( int i = 0; i < this.cells.length && nextRun < this.runs.length; ++i )
 		{
-			if ( this.cells[i].get() == FILLED )
+			if ( this.cells[i].get() == Cell.FILLED )
 			{
 				if ( edge < this.runs[nextRun].length )
 				{
 					for ( int j = edge; j < this.runs[nextRun].length
 							&& i < this.cells.length; ++j )
 					{
-						this.mark( i, FILLED );
+						this.fill( i );
 						++i;
 					}
 					if ( edge == 0 && i < this.cells.length )
 					{
-						this.mark( i, MARKED );
+						this.mark( i );
 					}
 					++nextRun;
 				}
-			} else if ( this.cells[i].get() == EMPTY )
+			}
+			else if ( this.cells[i].get() == Cell.EMPTY )
 			{
 				++edge;
-			} else if ( this.cells[i].get() == MARKED )
+			}
+			else if ( this.cells[i].get() == Cell.MARKED )
 			{
 				if ( edge < this.runs[nextRun].length )
 				{
 					while ( edge > 0 )
 					{
-						this.mark( i - edge--, MARKED );
+						this.mark( i - edge-- );
 					}
 				}
 				edge = 0;
@@ -205,31 +187,33 @@ public class Strip
 
 		for ( int i = this.cells.length - 1; i > 0 && nextRun > 0; --i )
 		{
-			if ( this.cells[i].get() == FILLED )
+			if ( this.cells[i].get() == Cell.FILLED )
 			{
 				if ( edge < this.runs[nextRun].length )
 				{
 					for ( int j = edge; j < this.runs[nextRun].length && i > 0; ++j )
 					{
-						this.mark( i, FILLED );
+						this.fill( i );
 						--i;
 					}
 					if ( edge == 0 && i > 0 )
 					{
-						this.mark( i, MARKED );
+						this.mark( i );
 					}
 					--nextRun;
 				}
-			} else if ( this.cells[i].get() == EMPTY )
+			}
+			else if ( this.cells[i].get() == Cell.EMPTY )
 			{
 				++edge;
-			} else if ( this.cells[i].get() == MARKED )
+			}
+			else if ( this.cells[i].get() == Cell.MARKED )
 			{
 				if ( edge < this.runs[nextRun].length )
 				{
 					while ( edge > 0 )
 					{
-						this.mark( i + edge, MARKED );
+						this.mark( i + edge );
 						--edge;
 					}
 				}
@@ -262,13 +246,40 @@ public class Strip
 	 *           If trying to MARK a FILLed cell or vice versa.
 	 */
 
-	public void mark ( int index, int value ) throws Exception
+	public void mark ( int index ) throws Exception
 	{
-		if ( this.cells[index].get() == EMPTY )
+		if ( this.cells[index].get() == Cell.EMPTY )
 		{
-			this.cells[index].set( value );
+			this.cells[index].set( Cell.MARKED );
 			this.crosses[index].queue( this.index );
-		} else if ( this.cells[index].get() != value )
+			if ( this.cells[index].substrip != null )
+				this.cells[index].substrip.reduce( index );
+		}
+		else if ( this.cells[index].get() == Cell.FILLED )
+		{
+			throw new Exception( "Contradiction" );
+		}
+	}
+
+	/**
+	 * Sets the value of a cell.
+	 * 
+	 * @param index
+	 *          The index of the cell to update.
+	 * @param value
+	 *          The value to update the cell to.
+	 * @throws Exception
+	 *           If trying to MARK a FILLed cell or vice versa.
+	 */
+
+	public void fill ( int index ) throws Exception
+	{
+		if ( this.cells[index].get() == Cell.EMPTY )
+		{
+			this.cells[index].set( Cell.FILLED );
+			this.crosses[index].queue( this.index );
+		}
+		else if ( this.cells[index].get() == Cell.MARKED )
 		{
 			throw new Exception( "Contradiction" );
 		}

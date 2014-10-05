@@ -42,16 +42,16 @@ public class Nonograms extends JPanel
 		{
 			for ( int j = 0; j < this.height; ++j )
 			{
-				board[j][i] = new AtomicInteger( Strip.EMPTY );
+				board[j][i] = new AtomicInteger( Cell.EMPTY );
 				tempColumn[i][j] = board[j][i];
 			}
 		}
-		
+
 		for ( int i = 0; i < this.height; ++i )
 		{
 			rows[i] = new Strip( board[i], columns, this.rowRuns[i], processQueue, i );
 		}
-		
+
 		for ( int i = 0; i < this.width; ++i )
 		{
 			columns[i] = new Strip( tempColumn[i], rows, this.columnRuns[i],
@@ -100,7 +100,8 @@ public class Nonograms extends JPanel
 		{
 			x *= this.width;
 			y *= index + 1;
-		} else
+		}
+		else
 		{
 			y *= this.height + 1;
 			x *= index;
@@ -120,11 +121,12 @@ public class Nonograms extends JPanel
 		int x = column * this.CELL_SIZE, y = row * this.CELL_SIZE;
 		g.drawRect( x, y, this.CELL_SIZE, this.CELL_SIZE );
 
-		if ( value == Strip.MARKED )
+		if ( value == Cell.MARKED )
 		{
 			g.drawLine( x + 2, y + 2, x + this.CELL_SIZE - 3, y + this.CELL_SIZE - 3 );
 			g.drawLine( x + this.CELL_SIZE - 3, y + 2, x + 2, y + this.CELL_SIZE - 3 );
-		} else if ( value == Strip.FILLED )
+		}
+		else if ( value == Cell.FILLED )
 		{
 			g.fillRect( x + 2, y + 2, this.CELL_SIZE - 3, this.CELL_SIZE - 3 );
 		}
@@ -189,21 +191,6 @@ public class Nonograms extends JPanel
 		frame.add( nono );
 		frame.setSize( 500, 400 );
 		frame.setVisible( true );
-
-		try
-		{
-			for ( int i = 0; i < nono.width; ++i )
-			{
-				nono.columns[i].process();
-			}
-			for ( int i = 0; i < nono.height; ++i )
-			{
-				nono.rows[i].process();
-			}
-		} catch ( Exception ex )
-		{
-			System.out.println( "Failed to initialize: " + ex.getMessage() );
-		}
 
 		while ( !nono.processQueue.isEmpty() )
 		{

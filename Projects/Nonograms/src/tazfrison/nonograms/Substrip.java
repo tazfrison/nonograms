@@ -14,7 +14,7 @@ public class Substrip
 	private Cell cells[];
 	private Strip parent;
 
-	// Strip indices this Substrip covers;
+	// Strip indices this Substrip covers
 	public int start;
 	public int end;
 
@@ -62,17 +62,20 @@ public class Substrip
 			this.cells = null;
 			this.next.previous = this.previous;
 			this.previous.next = this.next;
-		} else if ( index == this.start )
+		}
+		else if ( index == this.start )
 		{
 			// Trim beginning
 			this.cells = Arrays.copyOfRange( this.cells, 1, this.cells.length );
 			++this.start;
-		} else if ( index == this.end )
+		}
+		else if ( index == this.end )
 		{
 			// Trim end
 			this.cells = Arrays.copyOfRange( this.cells, 0, this.cells.length - 1 );
 			--this.end;
-		} else
+		}
+		else
 		{
 			// Create new Substrip after split point
 			Substrip child = new Substrip( Arrays.copyOfRange( this.cells, index
@@ -97,9 +100,9 @@ public class Substrip
 		{
 			for ( int i = 0; i < this.cells.length; ++i )
 			{
-				if ( this.cells[i].get() == Strip.EMPTY )
+				if ( this.cells[i].get() == Cell.EMPTY )
 				{
-					this.parent.mark( i + this.start, Strip.MARKED );
+					this.parent.mark( i + this.start );
 				}
 			}
 		} catch ( Exception ex )
